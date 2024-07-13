@@ -7,4 +7,5 @@ description: Reactions plugin with everything you need in it
 
 commands:
   chatgames:
+    permission: chatgames.admin
     description: Main command for Reactions plugin

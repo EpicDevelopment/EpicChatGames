@@ -4,6 +4,7 @@ import gg.minecrush.reactions.async.AutomaticEvents;
 import gg.minecrush.reactions.command.ReactionCommand;
 import gg.minecrush.reactions.command.ReactionTabComplete;
 import gg.minecrush.reactions.storage.yaml.Messages;
+import gg.minecrush.reactions.storage.yaml.Rewards;
 import gg.minecrush.reactions.storage.yaml.Words;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -20,6 +21,7 @@ public class Reactions extends JavaPlugin {
     private int automaticReactionsInterval;
     private Messages messages;
     private Words words;
+    private Rewards rewards;
     private AutomaticEvents automaticEvents;
 
     @Override
@@ -47,12 +49,23 @@ public class Reactions extends JavaPlugin {
                 Bukkit.getPluginManager().disablePlugin(this);
             }
 
+            try {
+                File msgFile = new File(getDataFolder(), "rewards.yml");
+                if (!msgFile.exists()) {
+                    saveResource("rewards.yml", false);
+                }
+            } catch (Exception e) {
+                getLogger().severe("[EpicChatGames] Failed to create rewards file");
+                Bukkit.getPluginManager().disablePlugin(this);
+            }
+
             this.messages = new Messages(this);
             this.words = new Words(this);
+            this.rewards = new Rewards(this);
 
 
             this.saveDefaultConfig();
-            reactionManager = new ReactionManager(this, words, messages);
+            reactionManager = new ReactionManager(this, words, messages, rewards);
             this.automaticReactionsInterval = this.getConfig().getInt("automaticReactionsInterval", 3);
             this.getCommand("chatgames").setExecutor(new ReactionCommand(reactionManager, this, messages, words));
             this.getCommand("chatgames").setTabCompleter(new ReactionTabComplete());
@@ -84,11 +97,9 @@ public class Reactions extends JavaPlugin {
     public void onReload() {
         this.reloadConfig();
         this.automaticReactionsInterval = this.getConfig().getInt("automaticReactionsInterval", 3); // Update the automaticReactionsInterval value
-        this.reactionManager = new ReactionManager(this, words, messages);
+        this.reactionManager = new ReactionManager(this, words, messages, rewards);
         this.getCommand("chatgames").setExecutor(new ReactionCommand(reactionManager, this, messages, words));
         this.getServer().getPluginManager().registerEvents(new ReactionListener(reactionManager), this);
-        if (this.getConfig().getBoolean("automaticReactionsEnabled", true)) {
-            this.automaticEvents = new AutomaticEvents(reactionManager, this);
-        }
+        automaticEvents.reload();
     }
 }
