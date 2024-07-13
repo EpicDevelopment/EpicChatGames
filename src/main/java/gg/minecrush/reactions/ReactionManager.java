@@ -1,16 +1,20 @@
 package gg.minecrush.reactions;
 
 import gg.minecrush.reactions.storage.yaml.Messages;
+import gg.minecrush.reactions.storage.yaml.Rewards;
 import gg.minecrush.reactions.storage.yaml.Words;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import gg.minecrush.reactions.util.color;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class ReactionManager {
@@ -21,6 +25,7 @@ public class ReactionManager {
     private boolean reactionActive;
     private final Words wordsManager;
     private final Messages messagesManager;
+    private final Rewards rewards;
 
 
     public String center(String message) {
@@ -38,11 +43,12 @@ public class ReactionManager {
         return centeredMessage.toString();
     }
 
-    public ReactionManager(JavaPlugin plugin, Words wordsManager, Messages messagesManager) {
+    public ReactionManager(JavaPlugin plugin, Words wordsManager, Messages messagesManager, Rewards rewards) {
         this.plugin = plugin;
         this.reactionActive = false;
         this.wordsManager = wordsManager;
         this.messagesManager = messagesManager;
+        this.rewards = rewards;
     }
 
     public void reset_Reaction(){
@@ -59,18 +65,77 @@ public class ReactionManager {
 
     public void handleCorrectAnswer(Player player, String message) {
         long timeTaken = System.currentTimeMillis() - reactionStartTime;
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), plugin.getConfig().getString("options.reward-command").replace("%player%", player.getName()));
-        });
         String timeFormatted = String.format("%.2f", timeTaken / 1000.0);
+
+        String reward = rewards.getRandomReward();
+        if (rewards.getBoolean("rewards." + reward + ".command")){
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), rewards.getValue("rewards." + reward + ".run-command").replace("%player%", player.getName()));
+            });
+        }
+        if (rewards.getBoolean("rewards." +  reward + ".item")) {
+            ConfigurationSection itemSection = rewards.getConfigurationSection("rewards." + reward + ".item-stack");
+            if (itemSection != null) {
+                ItemStack stack = itemSectionToItemStack(itemSection);
+                Map<Integer, ItemStack> remainingItems = player.getInventory().addItem(stack);
+                if (!remainingItems.isEmpty()) {
+                    for (ItemStack remainingItem : remainingItems.values()) {
+                        player.getWorld().dropItem(player.getLocation(), remainingItem);
+                    }
+                }
+            }
+        }
         Bukkit.broadcastMessage("");
         Bukkit.broadcastMessage(center(getMessage("chat-game-title")));
         Bukkit.broadcastMessage("");
         Bukkit.broadcastMessage(center(getMessage("player-answer").replace("%player%", player.getName()).replace("%message%", message).replace("%time%", timeFormatted)));
-        Bukkit.broadcastMessage(center(getMessage("reward-message").replace("%reward%", plugin.getConfig().getString("options.reward"))));
+        Bukkit.broadcastMessage(center(getMessage("reward-message").replace("%reward%", rewards.getValue("rewards." + reward + ".reward"))));
         Bukkit.broadcastMessage("");
-        currentAnswer = null;
-        reactionActive = false;
+
+
+            currentAnswer = null;
+            reactionActive = false;
+
+    }
+
+    private ItemStack itemSectionToItemStack(ConfigurationSection section) {
+        Material material = Material.valueOf(section.getString("type", "AIR"));
+        int amount = section.getInt("amount", 1);
+
+        ItemStack stack = new ItemStack(material, amount);
+
+        if (section.contains("meta")) {
+            ItemMeta meta = stack.getItemMeta();
+
+            ConfigurationSection metaSection = section.getConfigurationSection("meta");
+
+            if (metaSection != null) {
+                if (metaSection.contains("display-name")) {
+                    meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', metaSection.getString("display-name")));
+                }
+
+                if (metaSection.contains("lore")) {
+                    List<String> lore = metaSection.getStringList("lore");
+                    List<String> coloredLore = new ArrayList<>();
+                    for (String line : lore) {
+                        coloredLore.add(ChatColor.translateAlternateColorCodes('&', line));
+                    }
+                    meta.setLore(coloredLore);
+                }
+
+                if (metaSection.contains("enchants")) {
+                    ConfigurationSection enchantsSection = metaSection.getConfigurationSection("enchants");
+                    for (String enchantmentName : enchantsSection.getKeys(false)) {
+                        int level = enchantsSection.getInt(enchantmentName);
+                        ((ItemMeta) meta).addEnchant(Objects.requireNonNull(Enchantment.getByName(enchantmentName)), level, true);
+                    }
+                }
+            }
+
+            stack.setItemMeta(meta);
+        }
+
+        return stack;
     }
 
     public void startReaction(String type) {
