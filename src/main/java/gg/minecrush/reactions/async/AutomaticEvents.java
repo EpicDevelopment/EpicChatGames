@@ -40,18 +40,27 @@ public class AutomaticEvents {
                     reactionManager.startReaction(type);
                 }
             }
-        }.runTaskTimerAsynchronously(plugin, 60 * 20, 20 * 60 * automaticReactionsInterval);
+        }.runTaskTimerAsynchronously(plugin, 60 * 20, 20 * automaticReactionsInterval);
     }
 
     public synchronized void cancelCurrentTask() {
-        if (currentTask != null && !currentTask.isCancelled()) {
-            plugin.getLogger().info("Cancelling current automatic reaction task.");
-
-            currentTask.cancel();
+        if (currentTask != null) {
+            plugin.getLogger().info("Cancelling current automatic announcements task.");
+            try {
+                currentTask.cancel();
+                plugin.getLogger().info("Current task cancelled successfully.");
+            } catch (Exception e) {
+                plugin.getLogger().warning("Failed to cancel automatic announcements task: " + e.getMessage());
+            } finally {
+                currentTask = null;
+            }
+        } else {
+            plugin.getLogger().info("No automatic announcements task found to cancel.");
         }
     }
 
-    public void reload() {
+    public synchronized void reload() {
+        plugin.getLogger().info("Reloading announcements and configuration.");
         loadConfig();
         scheduleAutomaticReactions();
     }
