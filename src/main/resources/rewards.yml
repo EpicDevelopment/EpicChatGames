@@ -1,0 +1,22 @@
+rewards:
+  1:
+    reward: '$150,000'
+    command: true
+    run-command: 'eco give %player% 150000'
+    item: false
+    item-stack: {}
+  2:
+    reward: 'Custom Diamond Block'
+    command: false
+    run-command: 'eco give %player% 150000'
+    item: true
+    item-stack:
+      type: DIAMOND_BLOCK
+      amount: 3
+      meta:
+        display-name: '&bShiny Diamond Block'
+        lore:
+          - '&7A very valuable item'
+          - '&7Use it wisely'
+        enchants:
+          DURABILITY: 3
