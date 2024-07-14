@@ -40,7 +40,7 @@ public class AutomaticEvents {
                     reactionManager.startReaction(type);
                 }
             }
-        }.runTaskTimerAsynchronously(plugin, 60 * 20, 20 * automaticReactionsInterval);
+        }.runTaskTimerAsynchronously(plugin, 60 * 20, 20L * 60 * automaticReactionsInterval);
     }
 
     public synchronized void cancelCurrentTask() {
