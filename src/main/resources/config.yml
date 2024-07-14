@@ -3,7 +3,7 @@ options:
   mathMax: 250
 
   automatic:
-    automaticReactionsInterval: 120
+    automaticReactionsInterval: 1
     automaticReactionsEnabled: true
 
 
